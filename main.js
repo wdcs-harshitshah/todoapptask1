@@ -1,4 +1,3 @@
-
 let form = document.getElementById("form");
 let textInput = document.getElementById("textInput");
 let dateInput = document.getElementById("dateInput");
@@ -6,6 +5,7 @@ let textarea = document.getElementById("textarea");
 let msg = document.getElementById("msg");
 let tasks = document.getElementById("tasks");
 let add = document.getElementById("add");
+let data = JSON.parse(localStorage.getItem("data")) || [];
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -13,7 +13,7 @@ form.addEventListener("submit", (e) => {
 });
 
 let formValidation = () => {
-  if (textInput.value === "") {
+  if (textInput.value.trim() === "") {
     console.log("failure");
     msg.innerHTML = "Task cannot be blank";
   } else {
@@ -22,74 +22,99 @@ let formValidation = () => {
     acceptData();
     add.setAttribute("data-bs-dismiss", "modal");
     add.click();
-
-    (() => {
-      add.setAttribute("data-bs-dismiss", "");
-    })();
   }
 };
 
-let data = [{}];
-
 let acceptData = () => {
-  data.push({
-    text: textInput.value,
+  const task = {
+    text: textInput.value.trim(),
     date: dateInput.value,
     description: textarea.value,
-  });
+    checked: false
+  };
 
+  data.push(task);
   localStorage.setItem("data", JSON.stringify(data));
-
   console.log(data);
+  createTasks();
+};
+
+let toggleCheckbox = (taskId) => {
+  data[taskId].checked = !data[taskId].checked;
+  localStorage.setItem("data", JSON.stringify(data));
   createTasks();
 };
 
 let createTasks = () => {
   tasks.innerHTML = "";
-  data.map((x, y) => {
-    return (tasks.innerHTML += `
-    <div id=${y}>
-          <span class="fw-bold">${x.text}</span>
-          <span class="small text-secondary">${x.date}</span>
-          <p>${x.description}</p>
-  
-          <span class="options">
-            <i onClick= "editTask(this)" data-bs-toggle="modal" data-bs-target="#form" class="fas fa-edit"></i>
-            <i onClick ="deleteTask(this);createTasks()" class="fas fa-trash-alt"></i>
-          </span>
-        </div>
-    `);
+  data.forEach((task, index) => {
+    const taskDiv = document.createElement("div");
+    taskDiv.id = index;
+    taskDiv.innerHTML = `
+      <input type="checkbox" ${task.checked ? "checked" : ""} onclick="toggleCheckbox(${index})">
+      <span class="fw-bold">${task.text}</span>
+      <span class="small text-secondary">${task.date}</span>
+      <p>${task.description}</p>
+      <span class="options">
+        <i onClick="editTask(${index})" data-bs-toggle="modal" data-bs-target="#form" class="fas fa-edit"></i>
+        <i onClick="deleteTask(${index});createTasks()" class="fas fa-trash-alt"></i>
+      </span>`;
+    tasks.appendChild(taskDiv);
   });
 
   resetForm();
 };
 
-let deleteTask = (e) => {
-  e.parentElement.parentElement.remove();
-  data.splice(e.parentElement.parentElement.id, 1);
-  localStorage.setItem("data", JSON.stringify(data));
-  console.log(data);
-  
+let filterTasks = (filterType) => {
+  const filteredData = data.filter(task => {
+    if (filterType === 'checked') {
+      return task.checked;
+    } else if (filterType === 'unchecked') {
+      return !task.checked;
+    }
+    return true; 
+  });
+
+  tasks.innerHTML = "";  
+  filteredData.forEach((task, index) => {
+    const taskDiv = document.createElement("div");
+    taskDiv.id = index;
+    taskDiv.innerHTML = `
+      <input type="checkbox" ${task.checked ? "checked" : ""} onclick="toggleCheckbox(${index})">
+      <span class="fw-bold">${task.text}</span>
+      <span class="small text-secondary">${task.date}</span>
+      <p>${task.description}</p>
+      <span class="options">
+        <i onClick="editTask(${index})" data-bs-toggle="modal" data-bs-target="#form" class="fas fa-edit"></i>
+        <i onClick="deleteTask(${index});createTasks()" class="fas fa-trash-alt"></i>
+      </span>`;
+    tasks.appendChild(taskDiv);
+  });
 };
 
-let editTask = (e) => {
-  let selectedTask = e.parentElement.parentElement;
+let deleteTask = (taskId) => {
+  data.splice(taskId, 1);
+  localStorage.setItem("data", JSON.stringify(data));
+};
 
-  textInput.value = selectedTask.children[0].innerHTML;
-  dateInput.value = selectedTask.children[1].innerHTML;
-  textarea.value = selectedTask.children[2].innerHTML;
-
-  deleteTask(e);
+let editTask = (taskId) => {
+  textInput.value = data[taskId].text;
+  dateInput.value = data[taskId].date;
+  textarea.value = data[taskId].description;
+  deleteTask(taskId);
 };
 
 let resetForm = () => {
-  textInput.value = "";
-  dateInput.value = "";
-  textarea.value = "";
+    textInput.value = "";
+    dateInput.value = "";
+    textarea.value = "";
 };
 
 (() => {
-  data = JSON.parse(localStorage.getItem("data")) || []
-  console.log(data);
-  createTasks();
+    data = JSON.parse(localStorage.getItem("data")) || []
+    console.log(data);
+    createTasks();
 })();
+
+
+
